@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fonetica-v2';
+const CACHE_NAME = 'fonetica-v3';
 const DICT_URL = 'https://cdn.jsdelivr.net/gh/cmusphinx/cmudict@master/cmudict.dict';
 const APP_SHELL = ['./', './index.html', './manifest.json'];
 
