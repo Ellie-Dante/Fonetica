@@ -134,18 +134,33 @@
 const DICT_URL = 'https://cdn.jsdelivr.net/gh/cmusphinx/cmudict@master/cmudict.dict';
 
 const ARPA_TO_IPA = {
-  AA:'ɑ', AE:'æ', AH:'ʌ', AO:'ɔ', AW:'aʊ', AY:'aɪ',
+  AH:'ʌ', AO:'ɔː', AW:'aʊ', AY:'aɪ',
   B:'b', CH:'tʃ', D:'d', DH:'ð',
-  EH:'ɛ', ER:'ɝ', EY:'eɪ',
+  EH:'e', EY:'eɪ',
   F:'f', G:'ɡ', HH:'h',
-  IH:'ɪ', IY:'i',
+  IH:'ɪ', IY:'iː',
   JH:'dʒ', K:'k', L:'l', M:'m', N:'n', NG:'ŋ',
   OW:'oʊ', OY:'ɔɪ',
-  P:'p', R:'ɹ', S:'s', SH:'ʃ',
+  P:'p', R:'r', S:'s', SH:'ʃ',
   T:'t', TH:'θ',
-  UH:'ʊ', UW:'u',
+  UH:'ʊ', UW:'uː',
   V:'v', W:'w', Y:'j', Z:'z', ZH:'ʒ'
 };
+
+// Palavras onde o inglês britânico usa o som "ɑː" (bath) em vez do "æ" (trap)
+// americano — essa diferença é real (não é só notação), então não dá pra
+// derivar automaticamente do CMUdict. Lista não é exaustiva.
+const BATH_WORDS = new Set(['laugh','laughs','laughed','laughing','laughter','bath','baths',
+  'path','paths','class','classes','classy','glass','glasses','glassy','grass','grasses','grassy',
+  'ask','asks','asked','asking','after','answer','answers','answered','answering',
+  'dance','dances','danced','dancing','dancer','chance','chances',
+  'plant','plants','planted','planting','sample','samples','branch','branches',
+  'grasp','grasps','grasped','half','halves','calf','calves','aunt','aunts',
+  'craft','crafts','draft','drafts','graph','graphs','photograph','photographs',
+  'cast','fast','faster','fastest','last','mask','masks','pass','passes','passed','passing',
+  'task','tasks','vast','advance','advances','advanced','staff','raft','rafts',
+  'example','examples','demand','demands','demanded','france','french','rather',
+  'castle','basket','baskets']);
 
 let dict = new Map();
 
@@ -209,15 +224,19 @@ clearBtn.addEventListener('click', () => {
   result.innerHTML = 'A transcrição aparece aqui.';
 });
 
-function phonemeToIpa(phone){
-  const m = phone.match(/^([A-Z]+)([0-2])?$/);
-  if (!m) return phone.toLowerCase();
+function phonemeIpa(phones, i, wordLower){
+  const raw = phones[i];
+  const m = raw.match(/^([A-Z]+)([0-2])?$/);
+  if (!m) return raw.toLowerCase();
   const base = m[1], stress = m[2];
-  let ipa;
-  if (base === 'AH' && stress === '0') ipa = 'ə';
-  else if (base === 'ER' && stress === '0') ipa = 'ɚ';
-  else ipa = ARPA_TO_IPA[base] || base.toLowerCase();
-  return { ipa, stress: stress || null };
+  if (base === 'AH' && stress === '0') return 'ə';
+  if (base === 'AA') {
+    const next = phones[i + 1] ? phones[i + 1].replace(/[0-2]$/, '') : '';
+    return next === 'R' ? 'ɑː' : 'ɒ';
+  }
+  if (base === 'AE') return BATH_WORDS.has(wordLower) ? 'ɑː' : 'æ';
+  if (base === 'ER') return stress === '0' ? 'ər' : 'ɜːr';
+  return ARPA_TO_IPA[base] || base.toLowerCase();
 }
 
 function wordToIpa(wordLower){
@@ -230,26 +249,23 @@ function wordToIpa(wordLower){
 
   let groups;
   if (nVowels === 0) {
-    groups = [{ start: 0, end: phones.length - 1 }];
+    groups = [{ start: 0, end: phones.length - 1, stress: null }];
   } else {
     groups = [];
     for (let k = 0; k < nVowels; k++) {
       const start = k === 0 ? 0 : vowelIdx[k - 1] + 1;
-      const end = k === nVowels - 1 ? phones.length - 1 : vowelIdx[k + 1] - 1;
-      groups.push({ start, end });
+      const end = k === nVowels - 1 ? phones.length - 1 : vowelIdx[k];
+      const stress = phones[vowelIdx[k]].match(/([0-2])$/)[1];
+      groups.push({ start, end, stress });
     }
   }
 
   return groups.map(g => {
     let syllableIpa = '';
+    for (let i = g.start; i <= g.end; i++) syllableIpa += phonemeIpa(phones, i, wordLower);
     let stressMark = '';
-    for (let i = g.start; i <= g.end; i++) {
-      const parsed = phonemeToIpa(phones[i]);
-      if (typeof parsed === 'string') { syllableIpa += parsed; continue; }
-      syllableIpa += parsed.ipa;
-      if (nVowels > 1 && parsed.stress === '1') stressMark = 'ˈ';
-      if (nVowels > 1 && parsed.stress === '2' && !stressMark) stressMark = 'ˌ';
-    }
+    if (nVowels > 1 && g.stress === '1') stressMark = 'ˈ';
+    else if (nVowels > 1 && g.stress === '2') stressMark = 'ˌ';
     return stressMark + syllableIpa;
   }).join('');
 }
