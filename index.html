@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fonética — Transcritor IPA (CMUdict)</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14161f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14161f;
+    --surface:#1b1e29;
+    --surface-2:#20232f;
+    --border:#2c3040;
+    --ink:#eee9df;
+    --ink-dim:#9a9bab;
+    --brass:#c9974a;
+    --brass-dim:#8a713f;
+    --teal:#5a9088;
+    --error:#c9694a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:520px; margin:0 auto; padding:36px 20px 60px; }
+  header{ margin-bottom:22px; }
+  .mark{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:15px;
+    letter-spacing:.02em;
+    color:var(--brass);
+    display:inline-flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .mark span{ font-family:'Fraunces',serif; font-style:italic; font-size:22px; color:var(--ink); }
+  h1{ font-family:'Fraunces',serif; font-weight:400; font-size:34px; line-height:1.15; margin:14px 0 6px; }
+  h1 em{ font-style:italic; color:var(--brass); }
+  .sub{ color:var(--ink-dim); font-size:14.5px; line-height:1.5; max-width:40ch; }
+  .dict-status{
+    display:flex; align-items:center; gap:8px;
+    margin-top:14px; font-size:12.5px; color:var(--ink-dim);
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:8px; padding:9px 12px;
+  }
+  .dict-status.ready{ color:var(--teal); }
+  .dict-status.error{ color:var(--error); }
+  .dot{ width:7px;height:7px;border-radius:50%; background:var(--ink-dim); flex-shrink:0; }
+  .dict-status.ready .dot{ background:var(--teal); }
+  .dict-status.error .dot{ background:var(--error); }
+  .dict-status.loading .dot{ background:var(--brass); animation:pulse 1s ease-in-out infinite; }
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; margin-top:22px; }
+  label{ display:block; font-size:12.5px; color:var(--ink-dim); margin-bottom:8px; }
+  textarea{
+    width:100%; min-height:96px; resize:vertical;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:10px;
+    color:var(--ink); font-family:'Inter',sans-serif; font-size:16px; padding:12px 14px; line-height:1.5;
+  }
+  textarea:focus{ outline:none; border-color:var(--brass-dim); }
+  .charcount{ text-align:right; font-size:11.5px; color:var(--ink-dim); margin-top:6px; }
+  .row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .btn{
+    border:none; border-radius:10px; padding:12px 18px;
+    font-family:'Inter',sans-serif; font-size:14.5px; font-weight:600; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary{ background:var(--brass); color:#1a1408; flex:1; justify-content:center; }
+  .btn-primary:disabled{ opacity:.45; cursor:default; }
+  .btn-ghost{ background:transparent; border:1px solid var(--border); color:var(--ink-dim); }
+  .result{
+    margin-top:22px; background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:20px; min-height:88px; display:flex; flex-direction:column; justify-content:center; gap:14px;
+  }
+  .result.empty{ align-items:center; color:var(--ink-dim); font-size:13.5px; text-align:center; }
+  .ipa-text{ font-family:'Fraunces',serif; font-size:24px; line-height:1.6; color:var(--brass); word-break:break-word; }
+  .ipa-text .oov{ color:var(--ink-dim); font-style:italic; font-size:0.85em; }
+  .oov-note{ font-size:12px; color:var(--ink-dim); }
+  .result-actions{ display:flex; gap:10px; }
+  .icon-btn{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--ink);
+    width:40px; height:40px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .icon-btn.speaking{ background:var(--teal); border-color:var(--teal); color:#0d1a18; }
+  .icon-btn:active{ transform:scale(0.96); }
+  .status{ font-size:12.5px; color:var(--ink-dim); margin-top:4px; min-height:16px; }
+  .status.error{ color:var(--error); }
+  footer{ margin-top:30px; font-size:12px; color:var(--ink-dim); line-height:1.6; }
+  footer p{ margin:0 0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mark">ipa <span>/aɪ pi eɪ/</span></div>
+    <h1>Transcrição <em>fonética</em></h1>
+    <p class="sub">Baseado no CMU Pronouncing Dictionary. Depois do primeiro carregamento, funciona offline.</p>
+    <div class="dict-status loading" id="dictStatus"><span class="dot"></span><span id="dictStatusText">Carregando dicionário (~3,5 MB, só na primeira vez)…</span></div>
+  </header>
+
+  <div class="card">
+    <label for="input">Texto em inglês</label>
+    <textarea id="input" maxlength="500" placeholder="Digite ou cole o texto aqui…"></textarea>
+    <div class="charcount"><span id="count">0</span>/500</div>
+
+    <div class="row">
+      <button class="btn btn-primary" id="translateBtn" disabled>Transcrever para IPA</button>
+      <button class="btn btn-ghost" id="clearBtn">Limpar</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="result empty" id="result">A transcrição aparece aqui.</div>
+
+  <footer>
+    <p>Pronúncia americana (General American), como registrada no CMUdict. Palavras entre colchetes não estão no dicionário.</p>
+    <p>Dica: no Chrome do Android, toque em ⋮ e escolha "Adicionar à tela inicial" para abrir isto como um app.</p>
+  </footer>
+
+</div>
+
+<script>
+const DICT_URL = 'https://cdn.jsdelivr.net/gh/cmusphinx/cmudict@master/cmudict.dict';
+
+const ARPA_TO_IPA = {
+  AA:'ɑ', AE:'æ', AH:'ʌ', AO:'ɔ', AW:'aʊ', AY:'aɪ',
+  B:'b', CH:'tʃ', D:'d', DH:'ð',
+  EH:'ɛ', ER:'ɝ', EY:'eɪ',
+  F:'f', G:'ɡ', HH:'h',
+  IH:'ɪ', IY:'i',
+  JH:'dʒ', K:'k', L:'l', M:'m', N:'n', NG:'ŋ',
+  OW:'oʊ', OY:'ɔɪ',
+  P:'p', R:'ɹ', S:'s', SH:'ʃ',
+  T:'t', TH:'θ',
+  UH:'ʊ', UW:'u',
+  V:'v', W:'w', Y:'j', Z:'z', ZH:'ʒ'
+};
+
+let dict = new Map();
+
+const input = document.getElementById('input');
+const count = document.getElementById('count');
+const translateBtn = document.getElementById('translateBtn');
+const clearBtn = document.getElementById('clearBtn');
+const result = document.getElementById('result');
+const statusEl = document.getElementById('status');
+const dictStatus = document.getElementById('dictStatus');
+const dictStatusText = document.getElementById('dictStatusText');
+
+let lastIpa = '';
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+async function loadDict(){
+  try {
+    const res = await fetch(DICT_URL);
+    if (!res.ok) throw new Error('http ' + res.status);
+    const text = await res.text();
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if (!line || line.startsWith(';;;')) continue;
+      const spaceIdx = line.indexOf('  ');
+      if (spaceIdx === -1) continue;
+      const rawWord = line.slice(0, spaceIdx);
+      const phonesStr = line.slice(spaceIdx + 2).trim();
+      if (!phonesStr) continue;
+      const isVariant = rawWord.indexOf('(') !== -1;
+      const word = rawWord.split('(')[0];
+      const phones = phonesStr.split(' ');
+      if (!isVariant || !dict.has(word)) dict.set(word, phones);
+    }
+    dictStatus.className = 'dict-status ready';
+    dictStatusText.textContent = `Dicionário pronto — ${dict.size.toLocaleString('pt-BR')} palavras. Já funciona offline.`;
+    translateBtn.disabled = false;
+  } catch (err) {
+    dictStatus.className = 'dict-status error';
+    dictStatusText.textContent = 'Não foi possível carregar o dicionário. Conecte-se à internet ao menos uma vez e recarregue.';
+  }
+}
+loadDict();
+
+input.addEventListener('input', () => { count.textContent = input.value.length; });
+
+clearBtn.addEventListener('click', () => {
+  input.value = '';
+  count.textContent = '0';
+  lastIpa = '';
+  statusEl.textContent = '';
+  statusEl.classList.remove('error');
+  result.className = 'result empty';
+  result.innerHTML = 'A transcrição aparece aqui.';
+});
+
+function phonemeToIpa(phone){
+  const m = phone.match(/^([A-Z]+)([0-2])?$/);
+  if (!m) return phone.toLowerCase();
+  const base = m[1], stress = m[2];
+  let ipa;
+  if (base === 'AH' && stress === '0') ipa = 'ə';
+  else if (base === 'ER' && stress === '0') ipa = 'ɚ';
+  else ipa = ARPA_TO_IPA[base] || base.toLowerCase();
+  return { ipa, stress: stress || null };
+}
+
+function wordToIpa(wordUpper){
+  const phones = dict.get(wordUpper);
+  if (!phones) return null;
+
+  const vowelIdx = [];
+  phones.forEach((p, i) => { if (/[0-2]$/.test(p)) vowelIdx.push(i); });
+  const nVowels = vowelIdx.length;
+
+  let groups;
+  if (nVowels === 0) {
+    groups = [{ start: 0, end: phones.length - 1 }];
+  } else {
+    groups = [];
+    for (let k = 0; k < nVowels; k++) {
+      const start = k === 0 ? 0 : vowelIdx[k - 1] + 1;
+      const end = k === nVowels - 1 ? phones.length - 1 : vowelIdx[k + 1] - 1;
+      groups.push({ start, end });
+    }
+  }
+
+  return groups.map(g => {
+    let syllableIpa = '';
+    let stressMark = '';
+    for (let i = g.start; i <= g.end; i++) {
+      const parsed = phonemeToIpa(phones[i]);
+      if (typeof parsed === 'string') { syllableIpa += parsed; continue; }
+      syllableIpa += parsed.ipa;
+      if (nVowels > 1 && parsed.stress === '1') stressMark = 'ˈ';
+      if (nVowels > 1 && parsed.stress === '2' && !stressMark) stressMark = 'ˌ';
+    }
+    return stressMark + syllableIpa;
+  }).join('');
+}
+
+function transcribeText(text){
+  const tokens = text.split(/\s+/).filter(Boolean);
+  let anyOov = false;
+  const parts = tokens.map(tok => {
+    const clean = tok.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, '');
+    if (!clean) return null;
+    const ipa = wordToIpa(clean.toUpperCase());
+    if (ipa === null) { anyOov = true; return `<span class="oov">[${clean}]</span>`; }
+    return ipa;
+  }).filter(p => p !== null);
+  return { html: parts.join(' '), anyOov };
+}
+
+function doTranscribe(){
+  const text = input.value.trim();
+  if (!text) {
+    statusEl.textContent = 'Digite um texto primeiro.';
+    statusEl.classList.add('error');
+    return;
+  }
+  statusEl.textContent = '';
+  statusEl.classList.remove('error');
+  const { html, anyOov } = transcribeText(text);
+  lastIpa = text.split(/\s+/).map(tok => {
+    const clean = tok.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, '');
+    const ipa = clean ? wordToIpa(clean.toUpperCase()) : null;
+    return ipa || `[${clean || tok}]`;
+  }).join(' ');
+  renderResult(html, anyOov);
+}
+
+function renderResult(html, anyOov){
+  result.className = 'result';
+  result.innerHTML = `
+    <div class="ipa-text">${html}</div>
+    ${anyOov ? '<div class="oov-note">Palavras entre colchetes não foram encontradas no dicionário.</div>' : ''}
+    <div class="result-actions">
+      <button class="icon-btn" id="speakBtn" title="Ouvir pronúncia">${speakerIcon()}</button>
+      <button class="icon-btn" id="copyBtn" title="Copiar">${copyIcon()}</button>
+    </div>
+  `;
+  document.getElementById('speakBtn').addEventListener('click', speak);
+  document.getElementById('copyBtn').addEventListener('click', copyIpa);
+}
+
+function speakerIcon(){
+  return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+}
+function copyIcon(){
+  return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+}
+
+function pickVoice(){
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(v => v.lang === 'en-US' && v.name.includes('Google'))
+      || voices.find(v => v.lang === 'en-US')
+      || voices.find(v => v.lang.startsWith('en'))
+      || null;
+}
+
+function speak(){
+  const text = input.value.trim();
+  if (!text) return;
+  const speakBtn = document.getElementById('speakBtn');
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  const voice = pickVoice();
+  if (voice) utter.voice = voice;
+  utter.lang = 'en-US';
+  utter.rate = 0.95;
+  utter.onstart = () => speakBtn.classList.add('speaking');
+  utter.onend = () => speakBtn.classList.remove('speaking');
+  utter.onerror = () => speakBtn.classList.remove('speaking');
+  window.speechSynthesis.speak(utter);
+}
+
+function copyIpa(){
+  navigator.clipboard.writeText(lastIpa).then(() => {
+    statusEl.textContent = 'Copiado!';
+    statusEl.classList.remove('error');
+    setTimeout(() => { statusEl.textContent = ''; }, 1500);
+  });
+}
+
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
+translateBtn.addEventListener('click', doTranscribe);
+</script>
+</body>
+</html>

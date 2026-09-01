@@ -1,0 +1,10 @@
+{
+  "name": "Fonética — Transcritor IPA",
+  "short_name": "Fonética",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#14161f",
+  "theme_color": "#14161f",
+  "icons": []
+}
